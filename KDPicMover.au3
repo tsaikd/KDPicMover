@@ -1,7 +1,7 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.1
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.2
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,9 @@
 #cs
 
 Changelog:
+2008/09/19 1.0.0.2 by tsaikd@gmail.com
+Fix Bug: If Misc Picture is empty will not show application window at startup
+
 2008/09/07 1.0.0.1 by tsaikd@gmail.com
 First Release
 
@@ -25,8 +28,8 @@ First Release
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.1"
-Global Const $appdate = "2008/09/07"
+Global Const $appver = "1.0.0.2"
+Global Const $appdate = "2008/09/19"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
@@ -66,8 +69,8 @@ Func Main()
 
 	_GDIPlus_Startup()
 	_IEErrorHandlerRegister()
-	If Not InitSQL() Then Return
-	If Not InitPicList() Then Return
+	If Not InitSQL() Then Return MsgBox(0x10, $app, _("Initialize SQL failed"))
+	InitPicList() ; return false if misc picture dir is empty
 
 	$ie = _IECreateEmbedded()
 	$appgui = GUICreate($appname, $appwidth, $appheight)
