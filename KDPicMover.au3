@@ -13,6 +13,7 @@ Changelog:
 user can change the dir path
 add special directory
 Fix Bug: When moving the last picture in misc dir will enter a infinite loop
+Change parameter of image display size
 
 2008/09/19 1.0.0.2 by tsaikd@gmail.com
 Fix Bug: If Misc Picture is empty will not show application window at startup
@@ -373,7 +374,7 @@ Func ShowPicInApp()
 			$hPic = -1
 		Else
 			$sSize = StringFormat("(%dx%d)\t", $picw, $pich)
-			Local $fw = ($iIEW-10) / $picw
+			Local $fw = ($iIEW-45) / $picw
 			Local $fh = ($iIEH-35) / $pich
 			Local $fmin = _Min($fw, $fh)
 			If $fmin < 1 Then
