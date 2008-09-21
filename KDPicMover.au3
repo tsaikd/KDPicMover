@@ -12,6 +12,7 @@ Changelog:
 2008/09/21 1.0.0.3 by tsaikd@gmail.com
 user can change the dir path
 add special directory
+Fix Bug: When moving the last picture in misc dir will enter a infinite loop
 
 2008/09/19 1.0.0.2 by tsaikd@gmail.com
 Fix Bug: If Misc Picture is empty will not show application window at startup
@@ -355,6 +356,8 @@ Func ShowPicInApp()
 	Local $path = PicListGetNextPicPath()
 	If $path == "" Then
 		MsgBox(0x40, $app, _("Misc Picture Directory is Empty"))
+		_IENavigate($ie, "about:blank")
+		GUICtrlSetData($lblPicPath, "")
 		Return
 	EndIf
 
@@ -413,11 +416,14 @@ Func ShowPicInApp()
 	GUICtrlSetData($lblPicPath, $sSize&$sCurPicPath)
 EndFunc
 
-Func MovePic($srcpath, $tardir)
+Func MovePic($srcpath, $tardir, $bSplash = True)
+	If $bSplash Then SplashMsgBegin(_("Moving picture"))
+
 	If 1 == FileMove($srcpath, $tardir) Then
 		SQLAddHistory($srcpath, $tardir)
-		Return True
+		Return SplashMsgEnd(True)
 	Else
+		SplashMsgEnd()
 		MsgBox(0x10, $app, _("Move Picture failed"))
 		Return False
 	EndIf
@@ -427,6 +433,9 @@ Func SplashMsgBegin($msg)
 	SplashTextOn($app, $msg, 300, 120, -1, -1, 0x30)
 EndFunc
 
+#cs
+	@param $ret return value, if Default then return nothing
+#ce
 Func SplashMsgEnd($ret = Default)
 	SplashOff()
 	If $ret == Default Then
@@ -515,31 +524,25 @@ EndFunc
 Func btnBeauty()
 	If _IsPressed("10") Then Return SetDirPath("beauty")
 
-	SplashMsgBegin(_("Moving picture to beauty"))
 	If MovePic($sCurPicPath, $sPicRenameBeautyDir) Then
 		ShowPicInApp()
 	EndIf
-	SplashMsgEnd()
 EndFunc
 
 Func btnPretty()
 	If _IsPressed("10") Then Return SetDirPath("pretty")
 
-	SplashMsgBegin(_("Moving picture to pretty"))
 	If MovePic($sCurPicPath, $sPicRenamePrettyDir) Then
 		ShowPicInApp()
 	EndIf
-	SplashMsgEnd()
 EndFunc
 
 Func btnSpecial()
 	If _IsPressed("10") Then Return SetDirPath("special")
 
-	SplashMsgBegin(_("Moving picture to special"))
 	If MovePic($sCurPicPath, $sPicRenameSpecialDir) Then
 		ShowPicInApp()
 	EndIf
-	SplashMsgEnd()
 EndFunc
 
 ; unit of offset is second
