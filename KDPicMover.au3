@@ -1,7 +1,7 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.2
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.3
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,10 @@
 #cs
 
 Changelog:
+2008/09/21 1.0.0.3 by tsaikd@gmail.com
+user can change the dir path
+add special directory
+
 2008/09/19 1.0.0.2 by tsaikd@gmail.com
 Fix Bug: If Misc Picture is empty will not show application window at startup
 
@@ -25,14 +29,16 @@ First Release
 #include <SQLite.au3>
 #include <Math.au3>
 #Include <GDIPlus.au3>
+#include <Misc.au3>
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.2"
-Global Const $appdate = "2008/09/19"
+Global Const $appver = "1.0.0.3"
+Global Const $appdate = "2008/09/21"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
+Global Const $appini = @WorkingDir&"\"&$appname&".ini"
 
 ; Initialization
 Global $ie, $ieActiveX, $iIEW, $iIEH
@@ -49,10 +55,15 @@ Global $lblPicPath
 
 $appwidth = 1000
 $appheight = 700
-$sHomeUrl = "C:\Documents and Settings\tsaikd\桌面\picture\local\name\Fanni\w_DCseries_Fanni_20040313_001.jpg"
-$sPicMiscDir = "C:\Documents and Settings\tsaikd\桌面\picture\misc"
-$sPicRenameBeautyDir = "C:\Documents and Settings\tsaikd\桌面\picture\new\beauty"
-$sPicRenamePrettyDir = "C:\Documents and Settings\tsaikd\桌面\picture\new\pretty"
+Global $sPicMiscDir
+Global $sPicRenameBeautyDir
+Global $sPicRenamePrettyDir
+Global $sPicRenameSpecialDir
+
+Global $btnBeauty
+Global $btnPretty
+Global $btnSpecial
+Global $btnBrowse
 
 #cs
 Pleace set AutoItWinSetTitle($appname) first
@@ -63,12 +74,9 @@ Func IsAppActive()
 EndFunc
 
 Func Main()
-	If Not FileExists($sPicMiscDir) Then Return MsgBox(0x10, $app, _("Misc Picture Directory no found"))
-	If Not FileExists($sPicRenameBeautyDir) Then Return MsgBox(0x10, $app, _("Beauty Picture Directory no found"))
-	If Not FileExists($sPicRenamePrettyDir) Then Return MsgBox(0x10, $app, _("Pretty Picture Directory no found"))
-
 	_GDIPlus_Startup()
 	_IEErrorHandlerRegister()
+	If Not InitPath() Then Return MsgBox(0x10, $app, _("Initialize path failed"))
 	If Not InitSQL() Then Return MsgBox(0x10, $app, _("Initialize SQL failed"))
 	InitPicList() ; return false if misc picture dir is empty
 
@@ -89,24 +97,27 @@ Func Main()
 
 	$ieActiveX = GUICtrlCreateObj($ie, $iCtrlGap, $iCtrlGap, $iIEW, $iIEH)
 	$lblPicPath = GUICtrlCreateLabel("", $iCtrlGap, $appheight-$iCtrlH*2+$iLblO-$iWinBH, $appwidth-$iCtrlGap*2, $iLblH)
-	$btnBeauty = GUICtrlCreateButton(_("&Beauty"), $appwidth/2-$iBtnW/2-$iBtnG*2.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnBeauty = GUICtrlCreateButton(_("&Beauty"), $appwidth/2-$iBtnW/2-$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnPretty = GUICtrlCreateButton(_("&Pretty"), $appwidth/2-$iBtnW/2-$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnOpen = GUICtrlCreateButton(_("&Open"), $appwidth/2-$iBtnW/2-$iBtnG*0.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnBrowse = GUICtrlCreateButton(_("Browse"), $appwidth/2-$iBtnW/2+$iBtnG*0.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnSpecial = GUICtrlCreateButton(_("&Special"), $appwidth/2-$iBtnW/2-$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnOpen = GUICtrlCreateButton(_("&Open"), $appwidth/2-$iBtnW/2-$iBtnG*0, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnBrowse = GUICtrlCreateButton(_("Browse"), $appwidth/2-$iBtnW/2+$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnDelete = GUICtrlCreateButton(_("&Delete"), $appwidth/2-$iBtnW/2+$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnReload = GUICtrlCreateButton(_("Reload"), $appwidth/2-$iBtnW/2+$iBtnG*2.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnReload = GUICtrlCreateButton(_("Reload"), $appwidth/2-$iBtnW/2+$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 
 	$btnMsgExit = GUICtrlCreateButton("Exit", 0, 0)
+	GUIUpdatePath()
 	GUICtrlSetState(-1, $GUI_HIDE)
 	_IENavigate($ie, "about:blank")
 
-	Dim $aAccelKeys[6][2] = [ _
+	Dim $aAccelKeys[7][2] = [ _
 		["{ESC}", $btnMsgExit], _
 		["b", $btnBeauty], _
+		["p", $btnPretty], _
+		["s", $btnSpecial], _
 		["d", $btnDelete], _
 		["o", $btnOpen], _
-		["{ENTER}", $btnBrowse], _
-		["p", $btnPretty] _
+		["{ENTER}", $btnBrowse] _
 	]
 
 	GUISetAccelerators($aAccelKeys)
@@ -132,6 +143,8 @@ Func Main()
 			btnBeauty()
 		Case $msg == $btnPretty
 			btnPretty()
+		Case $msg == $btnSpecial
+			btnSpecial()
 		EndSelect
 	WEnd
 
@@ -139,6 +152,39 @@ Func Main()
 	DestroyPicList()
 	DestroySQL()
 	_GDIPlus_ShutDown()
+EndFunc
+
+Func InitPath()
+	$sPicMiscDir = IniRead($appini, "Global", "sPicMiscDir", "C:\Documents and Settings\tsaikd\桌面\picture\misc")
+	$sPicRenameBeautyDir = IniRead($appini, "Global", "sPicRenameBeautyDir", "C:\Documents and Settings\tsaikd\桌面\picture\new\beauty")
+	$sPicRenamePrettyDir = IniRead($appini, "Global", "sPicRenamePrettyDir", "C:\Documents and Settings\tsaikd\桌面\picture\new\pretty")
+	$sPicRenameSpecialDir = IniRead($appini, "Global", "sPicRenameSpecialDir", "C:\Documents and Settings\tsaikd\桌面\picture\new\special")
+
+	If Not FileExists($sPicMiscDir) Then
+		MsgBox(0x10, $app, _("Misc Picture Directory no found"))
+		If Not SetDirPath("browse") Then Return False
+	EndIf
+	If Not FileExists($sPicRenameBeautyDir) Then
+		MsgBox(0x10, $app, _("Beauty Picture Directory no found"))
+		If Not SetDirPath("beauty") Then Return False
+	EndIf
+	If Not FileExists($sPicRenamePrettyDir) Then
+		MsgBox(0x10, $app, _("Pretty Picture Directory no found"))
+		If Not SetDirPath("pretty") Then Return False
+	EndIf
+	If Not FileExists($sPicRenameSpecialDir) Then
+		MsgBox(0x10, $app, _("Special Picture Directory no found"))
+		If Not SetDirPath("special") Then Return False
+	EndIf
+
+	Return True
+EndFunc
+
+Func GUIUpdatePath()
+	GUICtrlSetTip($btnBrowse, StringFormat(_("Press [Shift] can set the path\nNow: %s"), $sPicMiscDir))
+	GUICtrlSetTip($btnBeauty, StringFormat(_("Press [Shift] can set the path\nNow: %s"), $sPicRenameBeautyDir))
+	GUICtrlSetTip($btnPretty, StringFormat(_("Press [Shift] can set the path\nNow: %s"), $sPicRenamePrettyDir))
+	GUICtrlSetTip($btnSpecial, StringFormat(_("Press [Shift] can set the path\nNow: %s"), $sPicRenameSpecialDir))
 EndFunc
 
 Func InitSQL()
@@ -268,32 +314,41 @@ Func DestroyPicList()
 EndFunc
 
 Func PicListGetNextPicPath()
-	If $hPicList == -1 Then Return ""
+	Local $path
+	Local $att
+	Local $ext
+	Local $aMatch
 
-	Local $path = FileFindNextFile($hPicList)
-	If @error Then
-		If @WorkingDir == $sPicMiscDir Then
-			Return ""
-		Else
-			InitPicList()
-			Return PicListGetNextPicPath()
+	While True
+		If $hPicList == -1 Then Return ""
+
+		$path = FileFindNextFile($hPicList)
+		If @error Then
+			If @WorkingDir == $sPicMiscDir Then
+				Return ""
+			Else
+				InitPicList()
+				Return PicListGetNextPicPath()
+			EndIf
 		EndIf
-	EndIf
 
-	Local $att = FileGetAttrib($path)
-	If @error Then Return ""
+		$att = FileGetAttrib($path)
+		If @error Then Return ""
 
-	If StringInStr($att, "D") Then
-		If InitPicList(@WorkingDir&"\"&$path) Then
-			Return PicListGetNextPicPath()
-		Else
-			MsgBox(0x10, $app, _("PicList Can't enter sub directory"))
-			InitPicList()
-			Return PicListGetNextPicPath()
+		If StringInStr($att, "D") Then
+			If InitPicList(@WorkingDir&"\"&$path) Then
+				Return PicListGetNextPicPath()
+			Else
+				MsgBox(0x10, $app, _("PicList Can't enter sub directory"))
+				InitPicList()
+				Return PicListGetNextPicPath()
+			EndIf
 		EndIf
-	EndIf
 
-	Return @WorkingDir&"\"&$path
+		$ext = StringRight($path, 4)
+		$aMatch = StringRegExp($ext, "(?i)\.(bmp|jpg)$", 2)
+		If @error == 0 Then Return @WorkingDir&"\"&$path
+	WEnd
 EndFunc
 
 Func ShowPicInApp()
@@ -381,12 +436,57 @@ Func SplashMsgEnd($ret = Default)
 	EndIf
 EndFunc
 
+#cs
+$name can be
+	"browse"
+	"beauty"
+	"pretty"
+	"special"
+
+@retval true if set new directory
+@retval false if cancel or invalid parameters
+#ce
+Func SetDirPath($name)
+	Local $path
+	Local $key
+	Local $prompt = StringFormat(_("Please select %s directory path"), $name)
+
+	Switch($name)
+	Case "browse"
+		$key = "sPicMiscDir"
+	Case "beauty"
+		$key = "sPicRenameBeautyDir"
+	Case "pretty"
+		$key = "sPicRenamePrettyDir"
+	Case "special"
+		$key = "sPicRenameSpecialDir"
+	Case Else
+		MsgBox(0x40, $app, _("SetDirPath(): Invalid parameter: $name"))
+		Return False
+	EndSwitch
+
+	$path = FileSelectFolder($prompt, "", 0x03, Execute("$"&$key))
+	If @error == 1 Then Return False
+
+	If FileExists($path) Then
+		IniWrite($appini, "Global", $key, $path)
+	Else
+		IniDelete($appini, "Global", $key)
+	EndIf
+	InitPath()
+	GUIUpdatePath()
+	Return True
+EndFunc
+
 Func btnOpen()
 	ShellExecute($sCurPicPath)
 EndFunc
 
 Func btnBrowse()
 	Local $a, $b, $c, $d
+
+	If _IsPressed("10") Then Return SetDirPath("browse")
+
 	$path = _PathSplit($sCurPicPath, $a, $b, $c, $d)
 	ShellExecute($a&$b)
 EndFunc
@@ -413,6 +513,8 @@ Func btnReload()
 EndFunc
 
 Func btnBeauty()
+	If _IsPressed("10") Then Return SetDirPath("beauty")
+
 	SplashMsgBegin(_("Moving picture to beauty"))
 	If MovePic($sCurPicPath, $sPicRenameBeautyDir) Then
 		ShowPicInApp()
@@ -421,8 +523,20 @@ Func btnBeauty()
 EndFunc
 
 Func btnPretty()
+	If _IsPressed("10") Then Return SetDirPath("pretty")
+
 	SplashMsgBegin(_("Moving picture to pretty"))
 	If MovePic($sCurPicPath, $sPicRenamePrettyDir) Then
+		ShowPicInApp()
+	EndIf
+	SplashMsgEnd()
+EndFunc
+
+Func btnSpecial()
+	If _IsPressed("10") Then Return SetDirPath("special")
+
+	SplashMsgBegin(_("Moving picture to special"))
+	If MovePic($sCurPicPath, $sPicRenameSpecialDir) Then
 		ShowPicInApp()
 	EndIf
 	SplashMsgEnd()
@@ -453,6 +567,10 @@ Func _($s)
 		Return "刪除檔案(&D)"
 	Case "Reload"
 		Return "重新載入"
+	Case "Press [Shift] can set the path\nNow: %s"
+		Return "按住 [Shift] 可以設定路徑\n目前設定: %s"
+	Case "Please select %s directory path"
+		Return "請選擇 %s 的資料夾"
 	EndSwitch
 	Return $s
 EndFunc
