@@ -1,7 +1,7 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.3
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.4
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,9 @@
 #cs
 
 Changelog:
+2008/09/22 1.0.0.4 by tsaikd@gmail.com
+Fix Bug: Stack overflow if misc dir exists non picture files
+
 2008/09/21 1.0.0.3 by tsaikd@gmail.com
 user can change the dir path
 add special directory
@@ -35,8 +38,8 @@ First Release
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.3"
-Global Const $appdate = "2008/09/21"
+Global Const $appver = "1.0.0.4"
+Global Const $appdate = "2008/09/22"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
@@ -291,7 +294,7 @@ EndFunc
 
 ; InitPicList() must be after InitSQL() because of FileChangeDir()
 Func InitPicList($path = "")
-	If $hPicList <> -1 Then DestroyPicList()
+	DestroyPicList()
 	If $path == "" Then $path = $sPicMiscDir
 
 	FileChangeDir($path)
@@ -301,7 +304,7 @@ Func InitPicList($path = "")
 			Return False
 		Else
 			FileChangeDir("..")
-			DirRemove($path)
+			ConsoleWrite(DirRemove($path)&@CRLF)
 			Return InitPicList()
 		EndIf
 	EndIf
@@ -349,7 +352,13 @@ Func PicListGetNextPicPath()
 
 		$ext = StringRight($path, 4)
 		$aMatch = StringRegExp($ext, "(?i)\.(bmp|jpg)$", 2)
-		If @error == 0 Then Return @WorkingDir&"\"&$path
+		If @error == 0 Then
+			Return @WorkingDir&"\"&$path
+		Else
+			If 6 == MsgBox(0x24, $app, StringFormat(_("Do you want to delete non picture file: %s"), $path)) Then
+				If Not FileDelete(@WorkingDir&"\"&$path) Then Return MsgBox(0x10, $app, _("Delete file failed"))
+			EndIf
+		EndIf
 	WEnd
 EndFunc
 
