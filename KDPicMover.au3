@@ -355,6 +355,7 @@ Func PicListGetNextPicPath()
 		If @error == 0 Then
 			Return @WorkingDir&"\"&$path
 		Else
+			SplashMsgEnd()
 			If 6 == MsgBox(0x24, $app, StringFormat(_("Do you want to delete non picture file: %s"), $path)) Then
 				If Not FileDelete(@WorkingDir&"\"&$path) Then Return MsgBox(0x10, $app, _("Delete file failed"))
 			EndIf
