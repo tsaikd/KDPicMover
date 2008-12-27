@@ -1,7 +1,7 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.4
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.5
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,9 @@
 #cs
 
 Changelog:
+2008/12/17 1.0.0.5 by tsaikd@gmail.com
+Auto fit desktop size
+
 2008/09/22 1.0.0.4 by tsaikd@gmail.com
 Fix Bug: Stack overflow if misc dir exists non picture files
 
@@ -38,8 +41,8 @@ First Release
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.4"
-Global Const $appdate = "2008/09/22"
+Global Const $appver = "1.0.0.5"
+Global Const $appdate = "2008/12/17"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
@@ -84,6 +87,10 @@ Func Main()
 	If Not InitPath() Then Return MsgBox(0x10, $app, _("Initialize path failed"))
 	If Not InitSQL() Then Return MsgBox(0x10, $app, _("Initialize SQL failed"))
 	InitPicList() ; return false if misc picture dir is empty
+
+	$hDesktop = _WinAPI_GetDesktopWindow()
+	$appwidth = _WinAPI_GetClientWidth($hDesktop) * 0.95
+	$appheight = _WinAPI_GetClientHeight($hDesktop) * 0.95 - 50
 
 	$ie = _IECreateEmbedded()
 	$appgui = GUICreate($appname, $appwidth, $appheight)
@@ -356,9 +363,9 @@ Func PicListGetNextPicPath()
 			Return @WorkingDir&"\"&$path
 		Else
 			SplashMsgEnd()
-			If 6 == MsgBox(0x24, $app, StringFormat(_("Do you want to delete non picture file: %s"), $path)) Then
-				If Not FileDelete(@WorkingDir&"\"&$path) Then Return MsgBox(0x10, $app, _("Delete file failed"))
-			EndIf
+;			If 6 == MsgBox(0x24, $app, StringFormat(_("Do you want to delete non picture file: %s"), $path)) Then
+;				If Not FileDelete(@WorkingDir&"\"&$path) Then Return MsgBox(0x10, $app, _("Delete file failed"))
+;			EndIf
 		EndIf
 	WEnd
 EndFunc
@@ -398,6 +405,7 @@ Func ShowPicInApp()
 	EndIf
 
 	If $hPic == -1 Then
+		MsgBox(0x10, $app, "GDIPlus load image failed: "&$sCurPicPath)
 		_IENavigate($ie, $sCurPicPath)
 	Else
 		_GDIPlus_ImageDispose($hPic)
