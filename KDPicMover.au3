@@ -411,7 +411,7 @@ Func ShowPicInApp()
 		_GDIPlus_ImageDispose($hPic)
 		$hPic = -1
 		_IEBodyWriteHTML($ie, '' & _
-			'<body style="margin:0; padding: 0;">' & _
+			'<body style="margin:0; padding: 0;"><center>' & _
 				'<img width="'&$npicw&'" height="'&$npich&'"' & _
 				' style="margin: 0; padding: 0;"' & _
 				' src="file://'&$sCurPicPath&'"' & _
@@ -428,7 +428,7 @@ Func ShowPicInApp()
 					'    this.height = h1;' & _
 					'}' & _
 				'">' & _
-			'</body>' & _
+			'</center></body>' & _
 			'')
 	EndIf
 
