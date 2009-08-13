@@ -1,7 +1,7 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.5
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.6
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,9 @@
 #cs
 
 Changelog:
+2009/08/13 1.0.0.6 by tsaikd@gmail.com
+Change hotkey
+
 2008/12/17 1.0.0.5 by tsaikd@gmail.com
 Auto fit desktop size
 
@@ -41,8 +44,8 @@ First Release
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.5"
-Global Const $appdate = "2008/12/17"
+Global Const $appver = "1.0.0.6"
+Global Const $appdate = "2009/08/13"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
@@ -109,27 +112,28 @@ Func Main()
 
 	$ieActiveX = GUICtrlCreateObj($ie, $iCtrlGap, $iCtrlGap, $iIEW, $iIEH)
 	$lblPicPath = GUICtrlCreateLabel("", $iCtrlGap, $appheight-$iCtrlH*2+$iLblO-$iWinBH, $appwidth-$iCtrlGap*2, $iLblH)
-	$btnBeauty = GUICtrlCreateButton(_("&Beauty"), $appwidth/2-$iBtnW/2-$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnPretty = GUICtrlCreateButton(_("&Pretty"), $appwidth/2-$iBtnW/2-$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnSpecial = GUICtrlCreateButton(_("&Special"), $appwidth/2-$iBtnW/2-$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnBeauty = GUICtrlCreateButton(_("Beauty(&1)"), $appwidth/2-$iBtnW/2-$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnPretty = GUICtrlCreateButton(_("Pretty(&2)"), $appwidth/2-$iBtnW/2-$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnSpecial = GUICtrlCreateButton(_("Special(&3)"), $appwidth/2-$iBtnW/2-$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnOpen = GUICtrlCreateButton(_("&Open"), $appwidth/2-$iBtnW/2-$iBtnG*0, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnBrowse = GUICtrlCreateButton(_("Browse"), $appwidth/2-$iBtnW/2+$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnDelete = GUICtrlCreateButton(_("&Delete"), $appwidth/2-$iBtnW/2+$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnReload = GUICtrlCreateButton(_("Reload"), $appwidth/2-$iBtnW/2+$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnReload = GUICtrlCreateButton(_("&Reload"), $appwidth/2-$iBtnW/2+$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 
 	$btnMsgExit = GUICtrlCreateButton("Exit", 0, 0)
 	GUIUpdatePath()
 	GUICtrlSetState(-1, $GUI_HIDE)
 	_IENavigate($ie, "about:blank")
 
-	Dim $aAccelKeys[7][2] = [ _
-		["{ESC}", $btnMsgExit], _
-		["b", $btnBeauty], _
-		["p", $btnPretty], _
-		["s", $btnSpecial], _
-		["d", $btnDelete], _
-		["o", $btnOpen], _
-		["{ENTER}", $btnBrowse] _
+	Dim $aAccelKeys[8][2] = [ _
+		["{ESC}"	, $btnMsgExit], _
+		["1"		, $btnBeauty], _
+		["2"		, $btnPretty], _
+		["3"		, $btnSpecial], _
+		["d"		, $btnDelete], _
+		["o"		, $btnOpen], _
+		["{ENTER}"	, $btnBrowse], _
+		["r"		, $btnReload] _
 	]
 
 	GUISetAccelerators($aAccelKeys)
@@ -587,8 +591,8 @@ Func _($s)
 		Return "瀏覽目錄"
 	Case "&Delete"
 		Return "刪除檔案(&D)"
-	Case "Reload"
-		Return "重新載入"
+	Case "&Reload"
+		Return "重新載入(&R)"
 	Case "Press [Shift] can set the path\nNow: %s"
 		Return "按住 [Shift] 可以設定路徑\n目前設定: %s"
 	Case "Please select %s directory path"
