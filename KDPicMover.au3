@@ -1,6 +1,6 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.7
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.8
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -8,6 +8,9 @@
 #cs
 
 Changelog:
+2009/08/19 1.0.0.8 by tsaikd@gmail.com
+Show rest file count
+
 2009/08/18 1.0.0.7 by tsaikd@gmail.com
 Show appver in app title
 
@@ -46,8 +49,8 @@ First Release
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.7"
-Global Const $appdate = "2009/08/18"
+Global Const $appver = "1.0.0.8"
+Global Const $appdate = "2009/08/19"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
@@ -64,6 +67,8 @@ Global Const $app = $appname&" "&$appver
 Global $hPicList = -1
 Global $sCurPicPath
 
+Global $iFileCount = 0
+Global $lblFileCount
 Global $lblPicPath
 
 $appwidth = 1000
@@ -109,11 +114,13 @@ Func Main()
 	$iBtnH = 25
 	$iBtnW = 100
 	$iBtnG = 150
+	$iFileCountW = 40
 	$iIEW = $appwidth-$iCtrlGap*2
 	$iIEH = $appheight-$iCtrlH*2-$iCtrlGap-$iWinBH
 
 	$ieActiveX = GUICtrlCreateObj($ie, $iCtrlGap, $iCtrlGap, $iIEW, $iIEH)
-	$lblPicPath = GUICtrlCreateLabel("", $iCtrlGap, $appheight-$iCtrlH*2+$iLblO-$iWinBH, $appwidth-$iCtrlGap*2, $iLblH)
+	$lblFileCount = GUICtrlCreateLabel($iFileCount, $iCtrlGap, $appheight-$iCtrlH*2+$iLblO-$iWinBH, $iFileCountW, $iLblH)
+	$lblPicPath = GUICtrlCreateLabel("", $iCtrlGap*2+$iFileCountW, $appheight-$iCtrlH*2+$iLblO-$iWinBH, $appwidth-$iCtrlGap*3-$iFileCountW, $iLblH)
 	$btnBeauty = GUICtrlCreateButton(_("Beauty(&1)"), $appwidth/2-$iBtnW/2-$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnPretty = GUICtrlCreateButton(_("Pretty(&2)"), $appwidth/2-$iBtnW/2-$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnSpecial = GUICtrlCreateButton(_("Special(&3)"), $appwidth/2-$iBtnW/2-$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
@@ -321,6 +328,14 @@ Func InitPicList($path = "")
 			Return InitPicList()
 		EndIf
 	EndIf
+
+	Local $tmp = DirGetSize($sPicMiscDir, 2)
+	If IsArray($tmp) Then
+		$iFileCount = $tmp[1]
+	Else
+		$iFileCount = 0
+	EndIf
+
 	Return True
 EndFunc
 
@@ -439,6 +454,7 @@ Func ShowPicInApp()
 	EndIf
 
 	GUICtrlSetData($lblPicPath, $sSize&$sCurPicPath)
+	GUICtrlSetData($lblFileCount, --$iFileCount)
 EndFunc
 
 Func MovePic($srcpath, $tardir, $bSplash = True)
