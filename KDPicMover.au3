@@ -454,7 +454,8 @@ Func ShowPicInApp()
 	EndIf
 
 	GUICtrlSetData($lblPicPath, $sSize&$sCurPicPath)
-	GUICtrlSetData($lblFileCount, --$iFileCount)
+	$iFileCount -= 1
+	GUICtrlSetData($lblFileCount, $iFileCount)
 EndFunc
 
 Func MovePic($srcpath, $tardir, $bSplash = True)
