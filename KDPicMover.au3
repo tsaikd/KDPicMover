@@ -329,7 +329,7 @@ Func InitPicList($path = "")
 		EndIf
 	EndIf
 
-	Local $tmp = DirGetSize($sPicMiscDir, 2)
+	Local $tmp = DirGetSize($sPicMiscDir, 3)
 	If IsArray($tmp) Then
 		$iFileCount = $tmp[1]
 	Else
