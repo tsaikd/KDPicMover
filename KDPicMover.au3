@@ -1,6 +1,7 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.8
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.9
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -8,6 +9,9 @@
 #cs
 
 Changelog:
+2013/01/19 1.0.0.9 by tsaikd@gmail.com
+Open image file with other App
+
 2009/08/19 1.0.0.8 by tsaikd@gmail.com
 Show rest file count
 
@@ -46,11 +50,12 @@ First Release
 #include <Math.au3>
 #Include <GDIPlus.au3>
 #include <Misc.au3>
+#include "Display_library_functions.au3"
 
 ; Variable Definition
 Global Const $appname = "KDPicMover"
-Global Const $appver = "1.0.0.8"
-Global Const $appdate = "2009/08/19"
+Global Const $appver = "1.0.0.9"
+Global Const $appdate = "2013/01/19"
 Global Const $author = "tsaikd@gmail.com"
 
 Global Const $appsql = $appname&".sqlite"
@@ -77,6 +82,7 @@ Global $sPicMiscDir
 Global $sPicRenameBeautyDir
 Global $sPicRenamePrettyDir
 Global $sPicRenameSpecialDir
+Global $sOpenAppPath
 
 Global $btnBeauty
 Global $btnPretty
@@ -98,12 +104,20 @@ Func Main()
 	If Not InitSQL() Then Return MsgBox(0x10, $app, _("Initialize SQL failed"))
 	InitPicList() ; return false if misc picture dir is empty
 
-	$hDesktop = _WinAPI_GetDesktopWindow()
-	$appwidth = _WinAPI_GetClientWidth($hDesktop) * 0.95
-	$appheight = _WinAPI_GetClientHeight($hDesktop) * 0.95 - 50
+	$screenInfo = _NumberAndNameMonitors()
+	If $screenInfo[0][0] > 1 Then
+		$i = 1
+		$ks = _DisplayKeySettings($screenInfo)
+		$appwidth = $ks[$i][4] * 0.95
+		$appheight = $ks[$i][5] * 0.95 - 50
+		$appgui = GUICreate($appname, $appwidth, $appheight, @DesktopWidth + $ks[$i][4] * 0.025, $ks[$i][5] * 0.025 + 310)
+	Else
+		$appwidth = @DesktopWidth * 0.95
+		$appheight = @DesktopHeight * 0.95 - 50
+		$appgui = GUICreate($appname, $appwidth, $appheight)
+	EndIf
 
 	$ie = _IECreateEmbedded()
-	$appgui = GUICreate($app, $appwidth, $appheight)
 	AutoItWinSetTitle($appname)
 
 	$iWinBH = 5
@@ -126,8 +140,8 @@ Func Main()
 	$btnSpecial = GUICtrlCreateButton(_("Special(&3)"), $appwidth/2-$iBtnW/2-$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnOpen = GUICtrlCreateButton(_("&Open"), $appwidth/2-$iBtnW/2-$iBtnG*0, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnBrowse = GUICtrlCreateButton(_("Browse"), $appwidth/2-$iBtnW/2+$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnDelete = GUICtrlCreateButton(_("&Delete"), $appwidth/2-$iBtnW/2+$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
-	$btnReload = GUICtrlCreateButton(_("&Reload"), $appwidth/2-$iBtnW/2+$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnDelete = GUICtrlCreateButton(_("Delete(&D)"), $appwidth/2-$iBtnW/2+$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	$btnReload = GUICtrlCreateButton(_("Reload(&R)"), $appwidth/2-$iBtnW/2+$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 
 	$btnMsgExit = GUICtrlCreateButton("Exit", 0, 0)
 	GUIUpdatePath()
@@ -141,8 +155,8 @@ Func Main()
 		["3"		, $btnSpecial], _
 		["d"		, $btnDelete], _
 		["o"		, $btnOpen], _
-		["{ENTER}"	, $btnBrowse], _
-		["r"		, $btnReload] _
+		["r"		, $btnReload], _
+		["{ENTER}"	, $btnBrowse] _
 	]
 
 	GUISetAccelerators($aAccelKeys)
@@ -180,10 +194,11 @@ Func Main()
 EndFunc
 
 Func InitPath()
-	$sPicMiscDir = IniRead($appini, "Global", "sPicMiscDir", "C:\Documents and Settings\tsaikd\桌面\picture\misc")
-	$sPicRenameBeautyDir = IniRead($appini, "Global", "sPicRenameBeautyDir", "C:\Documents and Settings\tsaikd\桌面\picture\new\beauty")
-	$sPicRenamePrettyDir = IniRead($appini, "Global", "sPicRenamePrettyDir", "C:\Documents and Settings\tsaikd\桌面\picture\new\pretty")
-	$sPicRenameSpecialDir = IniRead($appini, "Global", "sPicRenameSpecialDir", "C:\Documents and Settings\tsaikd\桌面\picture\new\special")
+	$sPicMiscDir = IniRead($appini, "Global", "sPicMiscDir", "C:\Users\tsaikd\Desktop\picture\misc")
+	$sPicRenameBeautyDir = IniRead($appini, "Global", "sPicRenameBeautyDir", "C:\Users\tsaikd\Desktop\picture\new\beauty")
+	$sPicRenamePrettyDir = IniRead($appini, "Global", "sPicRenamePrettyDir", "C:\Users\tsaikd\Desktop\picture\new\pretty")
+	$sPicRenameSpecialDir = IniRead($appini, "Global", "sPicRenameSpecialDir", "C:\Users\tsaikd\Desktop\picture\new\special")
+	$sOpenAppPath = IniRead($appini, "Global", "sOpenAppPath", "C:\Users\tsaikd\Desktop\DTP\Imagine_1.0.9_x64_Unicode\Imagine64.exe")
 
 	If Not FileExists($sPicMiscDir) Then
 		MsgBox(0x10, $app, _("Misc Picture Directory no found"))
@@ -349,8 +364,6 @@ EndFunc
 Func PicListGetNextPicPath()
 	Local $path
 	Local $att
-	Local $ext
-	Local $aMatch
 
 	While True
 		If $hPicList == -1 Then Return ""
@@ -378,16 +391,7 @@ Func PicListGetNextPicPath()
 			EndIf
 		EndIf
 
-		$ext = StringRight($path, 4)
-		$aMatch = StringRegExp($ext, "(?i)\.(bmp|jpg)$", 2)
-		If @error == 0 Then
-			Return @WorkingDir&"\"&$path
-		Else
-			SplashMsgEnd()
-;			If 6 == MsgBox(0x24, $app, StringFormat(_("Do you want to delete non picture file: %s"), $path)) Then
-;				If Not FileDelete(@WorkingDir&"\"&$path) Then Return MsgBox(0x10, $app, _("Delete file failed"))
-;			EndIf
-		EndIf
+		Return @WorkingDir&"\"&$path
 	WEnd
 EndFunc
 
@@ -530,7 +534,7 @@ Func SetDirPath($name)
 EndFunc
 
 Func btnOpen()
-	ShellExecute($sCurPicPath)
+	ShellExecute($sOpenAppPath, $sCurPicPath)
 EndFunc
 
 Func btnBrowse()
@@ -604,13 +608,13 @@ EndFunc
 
 Func _($s)
 	Switch($s)
-	Case "&Open"
+	Case "Open(&O)"
 		Return "開啟檔案(&O)"
 	Case "Browse"
 		Return "瀏覽目錄"
-	Case "&Delete"
+	Case "Delete(&D)"
 		Return "刪除檔案(&D)"
-	Case "&Reload"
+	Case "Reload(&R)"
 		Return "重新載入(&R)"
 	Case "Press [Shift] can set the path\nNow: %s"
 		Return "按住 [Shift] 可以設定路徑\n目前設定: %s"
