@@ -1,7 +1,7 @@
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
+ï»¿#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.9
+#AutoIt3Wrapper_Res_Fileversion=1.0.1.0
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,9 @@
 #cs
 
 Changelog:
+2013/04/28 1.0.1.0 by tsaikd@gmail.com
+add change screen button
+
 2013/01/19 1.0.0.9 by tsaikd@gmail.com
 Open image file with other App
 
@@ -58,7 +61,7 @@ Global Const $appver = "1.0.0.9"
 Global Const $appdate = "2013/01/19"
 Global Const $author = "tsaikd@gmail.com"
 
-Global Const $appsql = $appname&".sqlite"
+Global Const $appsql = @WorkingDir&"\"&$appname&".sqlite"
 Global Const $appini = @WorkingDir&"\"&$appname&".ini"
 
 ; Initialization
@@ -76,8 +79,8 @@ Global $iFileCount = 0
 Global $lblFileCount
 Global $lblPicPath
 
-$appwidth = 1000
-$appheight = 700
+Global $appwidth = 1000
+Global $appheight = 700
 Global $sPicMiscDir
 Global $sPicRenameBeautyDir
 Global $sPicRenamePrettyDir
@@ -87,7 +90,11 @@ Global $sOpenAppPath
 Global $btnBeauty
 Global $btnPretty
 Global $btnSpecial
+Global $btnOpen
 Global $btnBrowse
+Global $btnDelete
+Global $btnReload
+Global $btnScreen
 
 #cs
 Pleace set AutoItWinSetTitle($appname) first
@@ -106,11 +113,12 @@ Func Main()
 
 	$screenInfo = _NumberAndNameMonitors()
 	If $screenInfo[0][0] > 1 Then
-		$i = 1
+		Dim $iScreen = IniRead($appini, "Global", "iScreen", 2)
 		$ks = _DisplayKeySettings($screenInfo)
-		$appwidth = $ks[$i][4] * 0.95
-		$appheight = $ks[$i][5] * 0.95 - 50
-		$appgui = GUICreate($appname, $appwidth, $appheight, @DesktopWidth + $ks[$i][4] * 0.025, $ks[$i][5] * 0.025 + 310)
+		Dim $a = _NumberAndNameMonitors()
+		$appwidth = $ks[$iScreen][4] * 0.95
+		$appheight = $ks[$iScreen][5] * 0.95 - 50
+		$appgui = GUICreate($appname, $appwidth, $appheight, $ks[$iScreen][2] + $ks[$iScreen][4] * 0.025, $ks[$iScreen][3] + $ks[$iScreen][5] * 0.025)
 	Else
 		$appwidth = @DesktopWidth * 0.95
 		$appheight = @DesktopHeight * 0.95 - 50
@@ -142,13 +150,16 @@ Func Main()
 	$btnBrowse = GUICtrlCreateButton(_("Browse"), $appwidth/2-$iBtnW/2+$iBtnG*0.75, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnDelete = GUICtrlCreateButton(_("Delete(&D)"), $appwidth/2-$iBtnW/2+$iBtnG*1.5, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
 	$btnReload = GUICtrlCreateButton(_("Reload(&R)"), $appwidth/2-$iBtnW/2+$iBtnG*2.25, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	If $screenInfo[0][0] > 1 Then
+		$btnScreen = GUICtrlCreateButton(_("Screen(&N)"), $appwidth/2-$iBtnW/2+$iBtnG*3, $appheight-$iCtrlH-$iWinBH, $iBtnW, $iBtnH)
+	EndIf
 
 	$btnMsgExit = GUICtrlCreateButton("Exit", 0, 0)
 	GUIUpdatePath()
 	GUICtrlSetState(-1, $GUI_HIDE)
 	_IENavigate($ie, "about:blank")
 
-	Dim $aAccelKeys[8][2] = [ _
+	Dim $aAccelKeys[9][2] = [ _
 		["{ESC}"	, $btnMsgExit], _
 		["1"		, $btnBeauty], _
 		["2"		, $btnPretty], _
@@ -156,6 +167,7 @@ Func Main()
 		["d"		, $btnDelete], _
 		["o"		, $btnOpen], _
 		["r"		, $btnReload], _
+		["n"		, $btnScreen], _
 		["{ENTER}"	, $btnBrowse] _
 	]
 
@@ -184,6 +196,9 @@ Func Main()
 			btnPretty()
 		Case $msg == $btnSpecial
 			btnSpecial()
+		Case $msg == $btnScreen
+			btnScreen()
+			ExitLoop
 		EndSelect
 	WEnd
 
@@ -191,6 +206,10 @@ Func Main()
 	DestroyPicList()
 	DestroySQL()
 	_GDIPlus_ShutDown()
+
+	If $msg == $btnScreen Then
+		Main()
+	EndIf
 EndFunc
 
 Func InitPath()
@@ -591,6 +610,18 @@ Func btnSpecial()
 	EndIf
 EndFunc
 
+Func btnScreen()
+	Dim $screenInfo = _NumberAndNameMonitors()
+	If $screenInfo[0][0] > 1 Then
+		Dim $iScreen = IniRead($appini, "Global", "iScreen", 2)
+		If $iScreen == 1 Then
+			IniWrite($appini, "Global", "iScreen", 2)
+		Else
+			IniWrite($appini, "Global", "iScreen", 1)
+		EndIf
+	EndIf
+EndFunc
+
 ; unit of offset is second
 Func NowTime($offset=0)
 	Local $ret
@@ -609,17 +640,17 @@ EndFunc
 Func _($s)
 	Switch($s)
 	Case "Open(&O)"
-		Return "¶}±ÒÀÉ®×(&O)"
+		Return "é–‹å•Ÿæª”æ¡ˆ(&O)"
 	Case "Browse"
-		Return "ÂsÄı¥Ø¿ı"
+		Return "ç€è¦½ç›®éŒ„"
 	Case "Delete(&D)"
-		Return "§R°£ÀÉ®×(&D)"
+		Return "åˆªé™¤æª”æ¡ˆ(&D)"
 	Case "Reload(&R)"
-		Return "­«·s¸ü¤J(&R)"
+		Return "é‡æ–°è¼‰å…¥(&R)"
 	Case "Press [Shift] can set the path\nNow: %s"
-		Return "«ö¦í [Shift] ¥i¥H³]©w¸ô®|\n¥Ø«e³]©w: %s"
+		Return "æŒ‰ä½ [Shift] å¯ä»¥è¨­å®šè·¯å¾‘\nç›®å‰è¨­å®š: %s"
 	Case "Please select %s directory path"
-		Return "½Ğ¿ï¾Ü %s ªº¸ê®Æ§¨"
+		Return "è«‹é¸æ“‡ %s çš„è³‡æ–™å¤¾"
 	EndSwitch
 	Return $s
 EndFunc
