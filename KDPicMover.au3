@@ -1,7 +1,7 @@
 ﻿#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_outfile=KDPicMover.exe
 #AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_Res_Fileversion=1.0.1.0
+#AutoIt3Wrapper_Res_Fileversion=1.0.1.1
 #AutoIt3Wrapper_Res_Language=1028
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -9,6 +9,9 @@
 #cs
 
 Changelog:
+2013/05/06 1.0.1.1 by tsaikd@gmail.com
+support view multiple image once
+
 2013/04/28 1.0.1.0 by tsaikd@gmail.com
 add change screen button
 
@@ -380,7 +383,7 @@ Func DestroyPicList()
 	EndIf
 EndFunc
 
-Func PicListGetNextPicPath()
+Func PicListGetNextPicPath($bFindNextDir)
 	Local $path
 	Local $att
 
@@ -391,9 +394,11 @@ Func PicListGetNextPicPath()
 		If @error Then
 			If @WorkingDir == $sPicMiscDir Then
 				Return ""
-			Else
+			ElseIf $bFindNextDir Then
 				InitPicList()
-				Return PicListGetNextPicPath()
+				Return PicListGetNextPicPath($bFindNextDir)
+			Else
+				Return ""
 			EndIf
 		EndIf
 
@@ -402,11 +407,11 @@ Func PicListGetNextPicPath()
 
 		If StringInStr($att, "D") Then
 			If InitPicList(@WorkingDir&"\"&$path) Then
-				Return PicListGetNextPicPath()
+				Return PicListGetNextPicPath($bFindNextDir)
 			Else
 				MsgBox(0x10, $app, _("PicList Can't enter sub directory"))
 				InitPicList()
-				Return PicListGetNextPicPath()
+				Return PicListGetNextPicPath($bFindNextDir)
 			EndIf
 		EndIf
 
@@ -414,19 +419,37 @@ Func PicListGetNextPicPath()
 	WEnd
 EndFunc
 
+Global $picList[5] = ["", "", "", "", ""]
+Global $picIdx = -1
 Func ShowPicInApp()
-	Local $path = PicListGetNextPicPath()
-	If $path == "" Then
+	Local $path
+	While $picIdx < 4
+		$path = PicListGetNextPicPath($picIdx == -1)
+		If $path == "" Then
+			ExitLoop
+		EndIf
+		$picIdx = $picIdx + 1
+		$picList[$picIdx] = $path
+	WEnd
+
+	If $picList[0] == "" Then
 		MsgBox(0x40, $app, _("Misc Picture Directory is Empty"))
 		_IENavigate($ie, "about:blank")
 		GUICtrlSetData($lblPicPath, "")
 		Return
 	EndIf
 
-	$sCurPicPath = $path
+	$sCurPicPath = $picList[0]
+	$picList[0] = $picList[1]
+	$picList[1] = $picList[2]
+	$picList[2] = $picList[3]
+	$picList[3] = $picList[4]
+	$picList[4] = ""
+	$picIdx = $picIdx - 1
+
+	Local $iPicMaxHeight = $iIEH - 45
 	Local $hPic = _GDIPlus_ImageLoadFromFile($sCurPicPath)
 	Local $picw, $pich
-	Local $npicw, $npich
 	Local $sSize
 	If $hPic <> -1 Then
 		$picw = _GDIPlus_ImageGetWidth($hPic)
@@ -435,16 +458,6 @@ Func ShowPicInApp()
 			$hPic = -1
 		Else
 			$sSize = StringFormat("(%dx%d)\t", $picw, $pich)
-			Local $fw = ($iIEW-45) / $picw
-			Local $fh = ($iIEH-35) / $pich
-			Local $fmin = _Min($fw, $fh)
-			If $fmin < 1 Then
-				$npicw = Int($picw * $fmin)
-				$npich = Int($pich * $fmin)
-			Else
-				$npicw = $picw
-				$npich = $pich
-			EndIf
 		EndIf
 	EndIf
 
@@ -454,25 +467,36 @@ Func ShowPicInApp()
 	Else
 		_GDIPlus_ImageDispose($hPic)
 		$hPic = -1
+		Local $extPicBody = ""
+		If $picList[0] <> "" Then $extPicBody = $extPicBody & '<img class="ext" src="file://'&$picList[0]&'">'
+		If $picList[1] <> "" Then $extPicBody = $extPicBody & '<img class="ext" src="file://'&$picList[1]&'">'
+		If $picList[2] <> "" Then $extPicBody = $extPicBody & '<img class="ext" src="file://'&$picList[2]&'">'
+		If $picList[3] <> "" Then $extPicBody = $extPicBody & '<img class="ext" src="file://'&$picList[3]&'">'
 		_IEBodyWriteHTML($ie, '' & _
-			'<body style="margin:0; padding: 0;"><center>' & _
-				'<img width="'&$npicw&'" height="'&$npich&'"' & _
-				' style="margin: 0; padding: 0;"' & _
-				' src="file://'&$sCurPicPath&'"' & _
-				' onclick="javascript: ' & _
-					'var w1 = '&$picw&';' & _
-					'var h1 = '&$pich&';' & _
-					'var w2 = '&$npicw&';' & _
-					'var h2 = '&$npich&';' & _
-					'if (this.width == w1) {' & _
-					'    this.width = w2;' & _
-					'    this.height = h2;' & _
-					'} else {' & _
-					'    this.width = w1;' & _
-					'    this.height = h1;' & _
+			'<body style="margin:0; padding: 0;">' & _
+				'<style>' & _
+					'img.ext {' & _
+						'margin-left: 10px;' & _
+						'height: expression(this.height > '&$iPicMaxHeight&' ? '&$iPicMaxHeight&' : true);' & _
 					'}' & _
-				'">' & _
-			'</center></body>' & _
+				'</style>' & _
+				'<div style="white-space: nowrap;">' & _
+					'<img height="'&$iPicMaxHeight&'"' & _
+					' style="margin-right: 40px;"' & _
+					' src="file://'&$sCurPicPath&'"' & _
+					' onclick="javascript: ' & _
+						'var h1 = '&$pich&';' & _
+						'var h2 = '&$iPicMaxHeight&';' & _
+						'if (this.clicktag) {' & _
+						'    this.height = h2;' & _
+						'} else {' & _
+						'    this.height = h1;' & _
+						'}' & _
+						'this.clicktag = !this.clicktag;' & _
+					'">' & _
+					$extPicBody & _
+				'</div>' & _
+			'</body>' & _
 			'')
 	EndIf
 
@@ -581,6 +605,8 @@ EndFunc
 
 Func btnReload()
 	SplashMsgBegin(_("Reloading ..."))
+	$picList[0] = $picList[1] = $picList[2] = $picList[3] = $picList[4] = ""
+	$picIdx = -1
 	InitPicList()
 	ShowPicInApp()
 	SplashMsgEnd()
@@ -611,6 +637,8 @@ Func btnSpecial()
 EndFunc
 
 Func btnScreen()
+	$picList[0] = $picList[1] = $picList[2] = $picList[3] = $picList[4] = ""
+	$picIdx = -1
 	Dim $screenInfo = _NumberAndNameMonitors()
 	If $screenInfo[0][0] > 1 Then
 		Dim $iScreen = IniRead($appini, "Global", "iScreen", 2)
